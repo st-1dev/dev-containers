@@ -1,7 +1,7 @@
 .PHONY:
 default: build
 
-GO=go
+GO?=go
 GO_FLAGS=
 GOOS=linux
 GOARCH=amd64

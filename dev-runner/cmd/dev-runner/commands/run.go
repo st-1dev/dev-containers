@@ -122,7 +122,7 @@ func getMountPoints(
 	userInsideContainer string,
 ) (mountPoints map[string]string, err error) {
 	devHomeDirName := dev.GenDevHomeDirName(imageTag, hostWorkDir)
-	devHomeDir := filepath.Join(hostWorkDir, devHomeDirName)
+	devHomeDir := filepath.Join(hostWorkDir, "..", devHomeDirName)
 
 	homeDirInsideContainer := fmt.Sprintf("/home/%s", userInsideContainer)
 
@@ -135,6 +135,7 @@ func getMountPoints(
 		filepath.Join(homeDirInsideContainer, ".jdks"):   filepath.Join(devHomeDir, ".jdks"),
 		filepath.Join(homeDirInsideContainer, ".local"):  filepath.Join(devHomeDir, ".local"),
 		filepath.Join(homeDirInsideContainer, ".m2"):     filepath.Join(devHomeDir, ".m2"),
+		filepath.Join("/", "work"):                       hostWorkDir,
 	}
 	for containerDirPath, hostDirPath := range dirsMustBeMounted {
 		err = fp.MakePaths(hostDirPath)
