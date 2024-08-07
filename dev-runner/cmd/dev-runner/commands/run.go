@@ -87,7 +87,7 @@ func (p *RunCmd) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interface{})
 	containerName := dev.GenContainerName(p.imageTag, p.hostWorkDirPath)
 
 	var mountPoints map[string]string
-	mountPoints, err = getMountPoints(p.imageTag, p.hostWorkDirPath, p.user)
+	mountPoints, err = getMountPoints(p.imageTag, p.hostWorkDirPath, p.hostHomeDir, p.user)
 	if err != nil {
 		log.Fatalf("cannot get mount points: %s\n", err.Error())
 		return subcommands.ExitFailure
@@ -119,6 +119,7 @@ func (p *RunCmd) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interface{})
 func getMountPoints(
 	imageTag string,
 	hostWorkDir string,
+	hostHomeDir string,
 	userInsideContainer string,
 ) (mountPoints map[string]string, err error) {
 	devHomeDirName := dev.GenDevHomeDirName(imageTag, hostWorkDir)
@@ -157,8 +158,8 @@ func getMountPoints(
 	}
 
 	dirsMaybeMounted := map[string]string{
-		filepath.Join(homeDirInsideContainer, ".ssh"):    filepath.Join(devHomeDir, ".ssh"),
-		filepath.Join(homeDirInsideContainer, ".docker"): filepath.Join(devHomeDir, ".docker"),
+		filepath.Join(homeDirInsideContainer, ".ssh"):    filepath.Join(hostHomeDir, ".ssh"),
+		filepath.Join(homeDirInsideContainer, ".docker"): filepath.Join(hostHomeDir, ".docker"),
 	}
 	for containerDirPath, hostDirPath := range dirsMaybeMounted {
 		if !fp.IsDir(hostDirPath) {
@@ -168,7 +169,7 @@ func getMountPoints(
 	}
 
 	filesMaybeMounted := map[string]string{
-		filepath.Join(homeDirInsideContainer, ".gitconfig"): filepath.Join(devHomeDir, ".gitconfig"),
+		filepath.Join(homeDirInsideContainer, ".gitconfig"): filepath.Join(hostHomeDir, ".gitconfig"),
 		filepath.Join("/", "var", "run", "docker.sock"):     "/var/run/docker.sock",
 	}
 	for containerFilePath, hostFilePath := range filesMaybeMounted {
