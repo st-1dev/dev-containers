@@ -4,13 +4,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"os"
-	"os/exec"
-	"path/filepath"
-	"strconv"
 
 	"github.com/google/subcommands"
+
+	"runner/pkg/ssh"
 
 	fp "runner/pkg/filepath"
 )
@@ -64,34 +62,16 @@ func (p *AttachCmd) validateCliArguments() (err error) {
 	return nil
 }
 
-func (p *AttachCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (p *AttachCmd) Execute(_ context.Context, _ *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	var err error
 	err = p.validateCliArguments()
 	if err != nil {
 		return subcommands.ExitFailure
 	}
 
-	cleanCmd := exec.Command(
-		"ssh-keygen",
-		"-f", filepath.Join(p.hostHomeDir, ".ssh", "known_hosts"),
-		"-R", fmt.Sprintf("[%s]:%d", p.host, p.port),
-	)
-	_ = cleanCmd.Run()
-
-	connectCmd := exec.Command(
-		"sshpass", "-p", p.password,
-		"ssh", "-XY", fmt.Sprintf("%s@%s", p.user, p.host),
-		"-o", "StrictHostKeyChecking=no",
-		"-p", strconv.Itoa(p.port),
-	)
-	connectCmd.Stdin = os.Stdin
-	connectCmd.Stderr = os.Stderr
-	connectCmd.Stdout = os.Stdout
-	err = connectCmd.Run()
+	err = ssh.Shell(p.host, p.port, p.user, p.password)
 	if err != nil {
-		log.Fatalf("cannot connect: %s", err.Error())
 		return subcommands.ExitFailure
 	}
-
 	return subcommands.ExitSuccess
 }
