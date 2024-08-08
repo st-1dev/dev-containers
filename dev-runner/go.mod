@@ -1,4 +1,4 @@
-module runner
+module dev-runner
 
 go 1.22.4
 

@@ -9,12 +9,14 @@ import (
 	"path/filepath"
 	"sort"
 
-	"runner/pkg/conainer/management"
-	"runner/pkg/dev"
+	"dev-runner/pkg/conainer/management"
+	"dev-runner/pkg/conainer/management/docker"
+
+	"dev-runner/pkg/dev"
 
 	"github.com/google/subcommands"
 
-	fp "runner/pkg/filepath"
+	fp "dev-runner/pkg/filepath"
 )
 
 type RunCmd struct {
@@ -77,7 +79,7 @@ func (p *RunCmd) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interface{})
 		return subcommands.ExitFailure
 	}
 
-	manager := management.NewDockerManager()
+	manager := docker.NewDockerManager()
 	err = manager.Init(ctx)
 	if err != nil {
 		log.Fatalf("docker manager initialization failed: %s\n", err.Error())
@@ -86,15 +88,22 @@ func (p *RunCmd) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interface{})
 
 	containerName := dev.GenContainerName(p.imageTag, p.hostWorkDirPath)
 
-	var mountPoints map[string]string
+	var networkMode management.NetworkMode
+	networkMode, err = getNetworkMode(p.networkMode)
+	if err != nil {
+		log.Fatalf("%s\n", err.Error())
+		return subcommands.ExitFailure
+	}
+
+	var mountPoints []management.MountPoint
 	mountPoints, err = getMountPoints(p.imageTag, p.hostWorkDirPath, p.hostHomeDir, p.user)
 	if err != nil {
 		log.Fatalf("cannot get mount points: %s\n", err.Error())
 		return subcommands.ExitFailure
 	}
 
-	var environmentVariables map[string]string
-	var portBindings map[int]int
+	var environmentVariables []management.EnvironmentVariable
+	var portBindings []management.PortBinding
 
 	var containerId string
 	containerId, err = manager.RunContainer(
@@ -104,7 +113,7 @@ func (p *RunCmd) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interface{})
 		mountPoints,
 		environmentVariables,
 		portBindings,
-		p.networkMode,
+		networkMode,
 	)
 	if err != nil {
 		log.Fatalf("start container failed: %s\n", err.Error())
@@ -121,13 +130,11 @@ func getMountPoints(
 	hostWorkDir string,
 	hostHomeDir string,
 	userInsideContainer string,
-) (mountPoints map[string]string, err error) {
+) (mountPoints []management.MountPoint, err error) {
 	devHomeDirName := dev.GenDevHomeDirName(imageTag, hostWorkDir)
 	devHomeDir := filepath.Join(hostWorkDir, "..", devHomeDirName)
 
 	homeDirInsideContainer := fmt.Sprintf("/home/%s", userInsideContainer)
-
-	mountPoints = make(map[string]string)
 
 	dirsMustBeMounted := map[string]string{
 		filepath.Join(homeDirInsideContainer, ".cache"):  filepath.Join(devHomeDir, ".cache"),
@@ -143,7 +150,13 @@ func getMountPoints(
 		if err != nil {
 			return nil, fmt.Errorf("cannot create required directory '%s': %w", hostDirPath, err)
 		}
-		mountPoints[containerDirPath] = hostDirPath
+		mountPoints = append(
+			mountPoints,
+			management.MountPoint{
+				HostPath:      hostDirPath,
+				ContainerPath: containerDirPath,
+			},
+		)
 	}
 
 	filesMustBeMounted := map[string]string{
@@ -154,7 +167,13 @@ func getMountPoints(
 		if err != nil {
 			return nil, fmt.Errorf("cannot create required file '%s': %w", hostFilePath, err)
 		}
-		mountPoints[containerFilePath] = hostFilePath
+		mountPoints = append(
+			mountPoints,
+			management.MountPoint{
+				HostPath:      hostFilePath,
+				ContainerPath: containerFilePath,
+			},
+		)
 	}
 
 	dirsMaybeMounted := map[string]string{
@@ -165,7 +184,13 @@ func getMountPoints(
 		if !fp.IsDir(hostDirPath) {
 			continue
 		}
-		mountPoints[containerDirPath] = hostDirPath
+		mountPoints = append(
+			mountPoints,
+			management.MountPoint{
+				HostPath:      hostDirPath,
+				ContainerPath: containerDirPath,
+			},
+		)
 	}
 
 	filesMaybeMounted := map[string]string{
@@ -176,8 +201,23 @@ func getMountPoints(
 		if !fp.IsFile(hostFilePath) {
 			continue
 		}
-		mountPoints[containerFilePath] = hostFilePath
+		mountPoints = append(
+			mountPoints,
+			management.MountPoint{
+				HostPath:      hostFilePath,
+				ContainerPath: containerFilePath,
+			},
+		)
 	}
 
 	return mountPoints, nil
+}
+
+func getNetworkMode(value string) (networkMode management.NetworkMode, err error) {
+	for _, item := range management.GetNetworkModes() {
+		if string(item) == value {
+			return item, nil
+		}
+	}
+	return management.NetworkHost, fmt.Errorf("incorrect network mode '%s'", value)
 }

@@ -8,9 +8,9 @@ import (
 
 	"github.com/google/subcommands"
 
-	"runner/pkg/ssh"
+	"dev-runner/pkg/ssh"
 
-	fp "runner/pkg/filepath"
+	fp "dev-runner/pkg/filepath"
 )
 
 type AttachCmd struct {

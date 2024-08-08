@@ -5,7 +5,7 @@ import (
 	"flag"
 	"os"
 
-	"runner/cmd/dev-runner/commands"
+	"dev-runner/cmd/dev-runner/commands"
 
 	"github.com/google/subcommands"
 )
@@ -19,7 +19,6 @@ func main() {
 	subcommands.Register(&commands.LogsCmd{}, "")
 	subcommands.Register(&commands.RunCmd{}, "")
 	subcommands.Register(&commands.StopCmd{}, "")
-	subcommands.Register(&commands.UnloadCmd{}, "")
 
 	flag.Parse()
 	ctx := context.Background()

@@ -7,12 +7,13 @@ import (
 	"log"
 	"os"
 
-	"runner/pkg/conainer/management"
-	"runner/pkg/dev"
+	"dev-runner/pkg/conainer/management/docker"
+
+	"dev-runner/pkg/dev"
 
 	"github.com/google/subcommands"
 
-	fp "runner/pkg/filepath"
+	fp "dev-runner/pkg/filepath"
 )
 
 type LogsCmd struct {
@@ -58,7 +59,7 @@ func (p *LogsCmd) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interface{}
 		return subcommands.ExitFailure
 	}
 
-	manager := management.NewDockerManager()
+	manager := docker.NewDockerManager()
 	err = manager.Init(ctx)
 	if err != nil {
 		log.Fatalf("docker manager initialization failed: %s\n", err.Error())

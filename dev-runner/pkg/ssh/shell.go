@@ -2,8 +2,9 @@ package ssh
 
 import (
 	"fmt"
-	"github.com/blacknon/go-sshlib"
 	"strconv"
+
+	"github.com/blacknon/go-sshlib"
 
 	"golang.org/x/crypto/ssh"
 )
