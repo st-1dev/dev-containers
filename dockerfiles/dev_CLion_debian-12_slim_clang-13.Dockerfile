@@ -19,9 +19,7 @@ RUN echo \
     ca-certificates \
     curl \
     git \
-    libglib2.0-0 \
-    libicu72 \
-    libtinfo5 \
+    file \
     locales \
     nano \
     make \
@@ -169,5 +167,5 @@ LABEL dev.containers.distro.version="debian12"
 LABEL dev.containers.ide="CLion"
 
 # Run SSH server
-ENV PORT=2221
-CMD ["bash", "-c", "/usr/sbin/sshd -De -p$PORT"]
+ENV DEV_CONTAINER_SSH_PORT=2221
+CMD ["bash", "-c", "/usr/sbin/sshd -De -p$DEV_CONTAINER_SSH_PORT{}"]

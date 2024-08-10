@@ -26,9 +26,8 @@ type NetworkMode string
 const (
 	NetworkBridge NetworkMode = "bridge"
 	NetworkHost   NetworkMode = "host"
-	NetworkNat    NetworkMode = "nat"
 )
 
 func GetNetworkModes() []NetworkMode {
-	return []NetworkMode{NetworkBridge, NetworkHost, NetworkNat}
+	return []NetworkMode{NetworkBridge, NetworkHost}
 }

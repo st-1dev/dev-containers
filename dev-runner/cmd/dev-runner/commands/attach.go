@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/google/subcommands"
@@ -62,15 +63,24 @@ func (p *AttachCmd) validateCliArguments() (err error) {
 	return nil
 }
 
-func (p *AttachCmd) Execute(_ context.Context, _ *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	var err error
+func (p *AttachCmd) execute(_ context.Context, _ *flag.FlagSet) (err error) {
 	err = p.validateCliArguments()
 	if err != nil {
-		return subcommands.ExitFailure
+		return fmt.Errorf("command line validation failed: %w", err)
 	}
 
-	err = ssh.Shell(p.host, p.port, p.user, p.password)
+	err = ssh.RunShell(p.host, p.port, p.user, p.password)
 	if err != nil {
+		return fmt.Errorf("failed to run shell in container: %w", err)
+	}
+
+	return nil
+}
+
+func (p *AttachCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	err := p.execute(ctx, f)
+	if err != nil {
+		log.Fatalf("got error: %s\n", err.Error())
 		return subcommands.ExitFailure
 	}
 	return subcommands.ExitSuccess

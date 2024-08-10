@@ -21,7 +21,7 @@ import (
 )
 
 type dockerManager struct {
-	dockerClient *client.Client
+	con *client.Client
 }
 
 func NewDockerManager() management.ContainerManager {
@@ -29,13 +29,13 @@ func NewDockerManager() management.ContainerManager {
 }
 
 func (m *dockerManager) Init(_ context.Context) (err error) {
-	var client_ *client.Client
-	client_, err = client.NewClientWithOpts(client.FromEnv)
+	var con *client.Client
+	con, err = client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
-		return fmt.Errorf("cannot create docker client: %w", err)
+		return fmt.Errorf("cannot create client: %w", err)
 	}
 
-	m.dockerClient = client_
+	m.con = con
 	return err
 }
 
@@ -43,9 +43,9 @@ func (m *dockerManager) LoadImage(
 	ctx context.Context,
 	r io.Reader,
 ) (err error) {
-	_, err = m.dockerClient.ImageLoad(ctx, r, true)
+	_, err = m.con.ImageLoad(ctx, r, true)
 	if err != nil {
-		return fmt.Errorf("cannot load docker image: %w", err)
+		return fmt.Errorf("cannot load image: %w", err)
 	}
 	return nil
 }
@@ -55,7 +55,7 @@ func (m *dockerManager) GetImageLabels(
 	imageName string,
 ) (labels []management.Label, err error) {
 	var inspect types.ImageInspect
-	inspect, _, err = m.dockerClient.ImageInspectWithRaw(ctx, imageName)
+	inspect, _, err = m.con.ImageInspectWithRaw(ctx, imageName)
 	if err != nil {
 		return nil, fmt.Errorf("cannot inspect image '%s': %w", err)
 	}
@@ -118,7 +118,7 @@ func (m *dockerManager) RunContainer(
 	}
 
 	var containerResp_ container.CreateResponse
-	containerResp_, err = m.dockerClient.ContainerCreate(
+	containerResp_, err = m.con.ContainerCreate(
 		ctx,
 		&container.Config{
 			Image: imageName,
@@ -141,14 +141,14 @@ func (m *dockerManager) RunContainer(
 		containerName,
 	)
 	if err != nil {
-		return "", fmt.Errorf("cannot create docker container for image '%s': %w", imageName, err)
+		return "", fmt.Errorf("cannot create container from image '%s': %w", imageName, err)
 	}
 
 	containerId = containerResp_.ID
 
-	err = m.dockerClient.ContainerStart(ctx, containerId, container.StartOptions{})
+	err = m.con.ContainerStart(ctx, containerId, container.StartOptions{})
 	if err != nil {
-		return "", fmt.Errorf("cannot start container '%s' for image '%s': %w", containerId, imageName, err)
+		return "", fmt.Errorf("cannot start container '%s' from image '%s': %w", containerId, imageName, err)
 	}
 
 	return containerId, nil
@@ -158,14 +158,14 @@ func (m *dockerManager) StopContainer(
 	ctx context.Context,
 	containerName string,
 ) (err error) {
-	err = m.dockerClient.ContainerStop(ctx, containerName, container.StopOptions{})
+	err = m.con.ContainerStop(ctx, containerName, container.StopOptions{})
 	if err != nil {
-		return fmt.Errorf("cannot stop docker container '%s': %w", containerName, err)
+		return fmt.Errorf("cannot stop container '%s': %w", containerName, err)
 	}
 
-	err = m.dockerClient.ContainerRemove(ctx, containerName, container.RemoveOptions{RemoveVolumes: true})
+	err = m.con.ContainerRemove(ctx, containerName, container.RemoveOptions{RemoveVolumes: true})
 	if err != nil {
-		return fmt.Errorf("cannot remove docker container '%s': %w", containerName, err)
+		return fmt.Errorf("cannot remove container '%s': %w", containerName, err)
 	}
 
 	return nil
@@ -177,16 +177,17 @@ func (m *dockerManager) PrintContainerLogs(
 	w io.Writer,
 ) (err error) {
 	var reader_ io.ReadCloser
-	reader_, err = m.dockerClient.ContainerLogs(
+	reader_, err = m.con.ContainerLogs(
 		ctx,
 		containerName,
 		container.LogsOptions{
 			ShowStderr: true,
 			ShowStdout: true,
 			Timestamps: true,
-		})
+		},
+	)
 	if err != nil {
-		return fmt.Errorf("cannot get docker container logs from '%s': %w", containerName, err)
+		return fmt.Errorf("cannot get container logs from '%s': %w", containerName, err)
 	}
 	defer func() {
 		_ = reader_.Close()
@@ -194,7 +195,7 @@ func (m *dockerManager) PrintContainerLogs(
 
 	_, err = io.Copy(w, reader_)
 	if err != nil {
-		return fmt.Errorf("cannot print docker container logs from '%s': %w", containerName, err)
+		return fmt.Errorf("cannot print container logs from '%s': %w", containerName, err)
 	}
 
 	return nil
@@ -206,8 +207,6 @@ func getNetworkMode(mode management.NetworkMode) (networkMode container.NetworkM
 		return network.NetworkBridge, nil
 	case management.NetworkHost:
 		return network.NetworkHost, nil
-	case management.NetworkNat:
-		return network.NetworkNat, nil
 	default:
 		return network.NetworkDefault, fmt.Errorf("network mode '%v' is not supported", mode)
 	}

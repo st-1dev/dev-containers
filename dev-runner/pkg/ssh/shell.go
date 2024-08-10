@@ -9,7 +9,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func Shell(host string, port int, user string, password string) (err error) {
+func RunShell(host string, port int, user string, password string) (err error) {
 	con := &sshlib.Connect{ForwardX11: true}
 	auth := sshlib.CreateAuthMethodPassword(password)
 	err = con.CreateClient(host, strconv.Itoa(port), user, []ssh.AuthMethod{auth})

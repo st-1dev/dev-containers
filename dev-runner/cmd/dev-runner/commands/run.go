@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"sort"
 
-	"dev-runner/pkg/conainer/management"
-	"dev-runner/pkg/conainer/management/docker"
+	"dev-runner/pkg/conainer/management/creator"
 
+	"dev-runner/pkg/conainer/management"
 	"dev-runner/pkg/dev"
 
 	"github.com/google/subcommands"
@@ -20,14 +20,15 @@ import (
 )
 
 type RunCmd struct {
-	imageTag         string
-	hostWorkDirPath  string
-	hostHomeDir      string
-	user             string
-	host             string
-	containerSshPort int
-	networkMode      string
-	interactive      bool
+	containerManagerName string
+	imageTag             string
+	hostWorkDirPath      string
+	hostHomeDir          string
+	user                 string
+	host                 string
+	containerSshPort     int
+	networkMode          string
+	interactive          bool
 	sort.StringSlice
 }
 
@@ -48,6 +49,7 @@ func (p *RunCmd) SetFlags(f *flag.FlagSet) {
 	workDir, _ := os.Getwd()
 	homeDir, _ := os.UserHomeDir()
 
+	f.StringVar(&p.containerManagerName, "cm", "docker", "Containers manager. Values: docker or podman.")
 	f.StringVar(&p.imageTag, "image", "", "Dev image tag.")
 	f.StringVar(&p.hostWorkDirPath, "workDir", workDir, "Work dir on host to mount inside container.")
 	f.StringVar(&p.hostHomeDir, "homeDir", homeDir, "Home dir on host to mount directories(.ssh, .docker and etc) inside container.")
@@ -71,19 +73,21 @@ func (p *RunCmd) validateCliArguments() (err error) {
 	return nil
 }
 
-func (p *RunCmd) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	var err error
+func (p *RunCmd) execute(ctx context.Context, _ *flag.FlagSet) (err error) {
 	err = p.validateCliArguments()
 	if err != nil {
-		log.Fatalf("command line validation failed: %s\n", err.Error())
-		return subcommands.ExitFailure
+		return fmt.Errorf("command line validation failed: %w", err)
 	}
 
-	manager := docker.NewDockerManager()
+	var manager management.ContainerManager
+	manager, err = creator.CreateContainerManager(p.containerManagerName)
+	if err != nil {
+		return fmt.Errorf("cannot create container manager: %w", err)
+	}
+
 	err = manager.Init(ctx)
 	if err != nil {
-		log.Fatalf("docker manager initialization failed: %s\n", err.Error())
-		return subcommands.ExitFailure
+		return fmt.Errorf("container manager initialization failed: %w", err)
 	}
 
 	containerName := dev.GenContainerName(p.imageTag, p.hostWorkDirPath)
@@ -91,15 +95,13 @@ func (p *RunCmd) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interface{})
 	var networkMode management.NetworkMode
 	networkMode, err = getNetworkMode(p.networkMode)
 	if err != nil {
-		log.Fatalf("%s\n", err.Error())
-		return subcommands.ExitFailure
+		return err
 	}
 
 	var mountPoints []management.MountPoint
 	mountPoints, err = getMountPoints(p.imageTag, p.hostWorkDirPath, p.hostHomeDir, p.user)
 	if err != nil {
-		log.Fatalf("cannot get mount points: %s\n", err.Error())
-		return subcommands.ExitFailure
+		return fmt.Errorf("cannot get mount points: %w", err)
 	}
 
 	var environmentVariables []management.EnvironmentVariable
@@ -116,12 +118,19 @@ func (p *RunCmd) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interface{})
 		networkMode,
 	)
 	if err != nil {
-		log.Fatalf("start container failed: %s\n", err.Error())
-		return subcommands.ExitFailure
+		return fmt.Errorf("start container failed: %w", err)
 	}
 
 	log.Printf("container started '%s'\n", containerId)
+	return nil
+}
 
+func (p *RunCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	err := p.execute(ctx, f)
+	if err != nil {
+		log.Fatalf("got error: %s\n", err.Error())
+		return subcommands.ExitFailure
+	}
 	return subcommands.ExitSuccess
 }
 
@@ -143,6 +152,7 @@ func getMountPoints(
 		filepath.Join(homeDirInsideContainer, ".jdks"):   filepath.Join(devHomeDir, ".jdks"),
 		filepath.Join(homeDirInsideContainer, ".local"):  filepath.Join(devHomeDir, ".local"),
 		filepath.Join(homeDirInsideContainer, ".m2"):     filepath.Join(devHomeDir, ".m2"),
+		filepath.Join(homeDirInsideContainer, "go"):      filepath.Join(devHomeDir, "go"),
 		filepath.Join("/", "work"):                       hostWorkDir,
 	}
 	for containerDirPath, hostDirPath := range dirsMustBeMounted {

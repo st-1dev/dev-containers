@@ -7,7 +7,8 @@ import (
 	"log"
 	"os"
 
-	"dev-runner/pkg/conainer/management/docker"
+	"dev-runner/pkg/conainer/management"
+	"dev-runner/pkg/conainer/management/creator"
 
 	"dev-runner/pkg/dev"
 
@@ -17,8 +18,9 @@ import (
 )
 
 type StopCmd struct {
-	imageTag        string
-	hostWorkDirPath string
+	containerManagerName string
+	imageTag             string
+	hostWorkDirPath      string
 }
 
 func (*StopCmd) Name() string {
@@ -37,6 +39,7 @@ func (*StopCmd) Usage() string {
 func (p *StopCmd) SetFlags(f *flag.FlagSet) {
 	workDir, _ := os.Getwd()
 
+	f.StringVar(&p.containerManagerName, "cm", "docker", "Containers manager. Values: docker or podman.")
 	f.StringVar(&p.imageTag, "image", "", "Dev image tag.")
 	f.StringVar(&p.hostWorkDirPath, "workDir", workDir, "Work dir on host to mount inside container.")
 }
@@ -51,28 +54,38 @@ func (p *StopCmd) validateCliArguments() (err error) {
 	return nil
 }
 
-func (p *StopCmd) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	var err error
+func (p *StopCmd) execute(ctx context.Context, _ *flag.FlagSet) (err error) {
 	err = p.validateCliArguments()
 	if err != nil {
-		log.Fatalf("command line validation failed: %s\n", err.Error())
-		return subcommands.ExitFailure
+		return fmt.Errorf("command line validation failed: %w", err)
 	}
 
-	manager := docker.NewDockerManager()
+	var manager management.ContainerManager
+	manager, err = creator.CreateContainerManager(p.containerManagerName)
+	if err != nil {
+		return fmt.Errorf("cannot create container manager: %w", err)
+	}
+
 	err = manager.Init(ctx)
 	if err != nil {
-		log.Fatalf("docker manager initialization failed: %s\n", err.Error())
-		return subcommands.ExitFailure
+		return fmt.Errorf("container manager initialization failed: %w", err)
 	}
 
 	containerName := dev.GenContainerName(p.imageTag, p.hostWorkDirPath)
 
 	err = manager.StopContainer(ctx, containerName)
 	if err != nil {
-		log.Fatalf("stop container failed: %s\n", err.Error())
-		return subcommands.ExitFailure
+		return fmt.Errorf("stop container failed: %w", err)
 	}
 
+	return nil
+}
+
+func (p *StopCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	err := p.execute(ctx, f)
+	if err != nil {
+		log.Fatalf("got error: %s\n", err.Error())
+		return subcommands.ExitFailure
+	}
 	return subcommands.ExitSuccess
 }
