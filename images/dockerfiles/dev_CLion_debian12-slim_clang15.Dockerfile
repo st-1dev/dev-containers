@@ -49,6 +49,11 @@ RUN echo \
 
 FROM dev-base AS dev-base-with-sshd
 
+# Make commands to fail due to an error at any stage in the pipe,
+# prepend set -o pipefail && to ensure that an unexpected error prevents
+# the build from inadvertently succeeding.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 # Install openssh server.
 RUN echo \
   && echo "update system packages manager cache" \
@@ -70,6 +75,11 @@ RUN echo \
 
 FROM dev-base-with-sshd AS dev-base-with-user
 
+# Make commands to fail due to an error at any stage in the pipe,
+# prepend set -o pipefail && to ensure that an unexpected error prevents
+# the build from inadvertently succeeding.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 # Create an user.
 RUN echo \
   && echo "creating user" \
@@ -81,12 +91,22 @@ RUN echo \
   && echo "user ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/user \
   && chmod 0440 /etc/sudoers.d/user \
   \
-  && echo "setup environment variables for user" \
-  && echo "DISPLAY=:0" >> /home/user/.bashrc \
-  && echo "LIBGL_ALWAYS_INDIRECT=1" >> /home/user/.bashrc
+  && echo "setup bashrc.d" \
+  && mkdir -p /home/user/.bashrc.d \
+  && echo 'for f in /home/user/.bashrc.d/* ; do . "${f}" ; done' >> /home/user/.bashrc
+
+COPY 00_sensible.bash /home/user/.bashrc.d
+COPY 01_x11.bash /home/user/.bashrc.d
+COPY 81_cmake_path.bash /home/user/.bashrc.d
+COPY 82_ninja_path.bash /home/user/.bashrc.d
 
 
 FROM dev-base-with-user AS dev-base-with-dev-packags
+
+# Make commands to fail due to an error at any stage in the pipe,
+# prepend set -o pipefail && to ensure that an unexpected error prevents
+# the build from inadvertently succeeding.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Applications versions.
 ARG CMAKE_VERSION
@@ -150,6 +170,11 @@ RUN echo \
 
 FROM dev-base-with-dev-packags AS dev-base-with-ide
 
+# Make commands to fail due to an error at any stage in the pipe,
+# prepend set -o pipefail && to ensure that an unexpected error prevents
+# the build from inadvertently succeeding.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 # Install CLion.
 ARG CLION_VERSION
 RUN echo \
@@ -169,6 +194,11 @@ RUN echo \
 
 
 FROM dev-base-with-ide AS dev-base-final
+
+# Make commands to fail due to an error at any stage in the pipe,
+# prepend set -o pipefail && to ensure that an unexpected error prevents
+# the build from inadvertently succeeding.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 LABEL org.opencontainers.image.documentation="https://github.com/stle85/dev-containers"
 LABEL org.opencontainers.image.source="https://github.com/stle85/dev-containers"
