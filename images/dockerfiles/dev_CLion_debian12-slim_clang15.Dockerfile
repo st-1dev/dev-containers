@@ -18,16 +18,17 @@ RUN echo \
     bash-completion \
     ca-certificates \
     curl \
-    git \
     file \
+    git \
     locales \
-    nano \
     make \
+    nano \
     openssh-client \
     procps \
     rsync \
     sshpass \
     sudo \
+    unzip \
     wget \
   \
   && echo "installing X11 packages" \
@@ -88,30 +89,63 @@ RUN echo \
 FROM dev-base-with-user AS dev-base-with-dev-packags
 
 # Applications versions.
+ARG CMAKE_VERSION
+ARG NINJA_VERSION
 ARG BAZELISK_VERSION
 ARG BUILDIFIER_VERSION
 ARG BUILDOZER_VERSION
 
 RUN echo \
+  && echo "update system packages manager cache" \
+  && apt-get update \
+  \
+  && echo "installing C/C++/Python packages" \
+  && apt-get install --no-install-recommends -y \
+    clang-15 \
+    clang-format-15 \
+    clang-tidy-15 \
+    lld-15 \
+    lldb-15 \
+    python3 \
+  \
+  && echo "clean system packages manager cache" \
+  && apt-get clean -y \
+  \
+  && echo "installing cmake" \
+  && curl -sLo \
+    /opt/cmake.tar.gz \
+    "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz" \
+  && mkdir -p /opt/cmake \
+  && tar --strip-components=1  -xf /opt/cmake.tar.gz -C /opt/cmake \
+  && rm /opt/cmake.tar.gz \
+  \
+  && echo "installing ninja" \
+  && curl -sLo \
+    /opt/ninja.zip \
+   "https://github.com/ninja-build/ninja/releases/download/v${NINJA_VERSION}/ninja-linux.zip" \
+  && mkdir -p /opt/ninja/bin \
+  && unzip -x /opt/ninja.zip -d /opt/ninja/bin \
+  && rm /opt/ninja.zip \
+  \
   && echo "installing bazelisk" \
   && curl -sLo \
     /usr/bin/bazel \
-    "https://github.com/bazelbuild/bazelisk/releases/download/${BAZELISK_VERSION}/bazelisk-linux-amd64" \
+    "https://github.com/bazelbuild/bazelisk/releases/download/v${BAZELISK_VERSION}/bazelisk-linux-amd64" \
   && chmod +x /usr/bin/bazel \
   \
   && echo "installing buildifier" \
   && curl -sLo \
     /usr/bin/buildifier \
-    "https://github.com/bazelbuild/buildtools/releases/download/${BUILDIFIER_VERSION}/buildifier-linux-amd64" \
+    "https://github.com/bazelbuild/buildtools/releases/download/v${BUILDIFIER_VERSION}/buildifier-linux-amd64" \
   && chmod +x /usr/bin/buildifier \
   \
   && echo "installing buildozer" \
   && curl -sLo \
     /usr/bin/buildozer \
-    "https://github.com/bazelbuild/buildtools/releases/download/${BUILDOZER_VERSION}/buildozer-linux-amd64" \
+    "https://github.com/bazelbuild/buildtools/releases/download/v${BUILDOZER_VERSION}/buildozer-linux-amd64" \
   && chmod +x /usr/bin/buildozer \
   \
-  && echo "dev-CLion-debian12-slim" >> /etc/debian_chroot
+  && echo "dev-CLion-debian12-slim-clang13" >> /etc/debian_chroot
 
 
 FROM dev-base-with-dev-packags AS dev-base-with-ide
@@ -131,7 +165,7 @@ RUN echo \
   && ln -s \
     /opt/jetbrains/CLion/bin/clion.sh \
     /usr/bin/ide.sh \
-  && rm -f /opt/jetbrains/CLion.tar.gz
+  && rm /opt/jetbrains/CLion.tar.gz
 
 
 FROM dev-base-with-ide AS dev-base-final
@@ -143,14 +177,14 @@ LABEL org.opencontainers.image.url="https://github.com/stle85/dev-containers"
 LABEL org.opencontainers.image.documentation="https://github.com/stle85/dev-containers"
 LABEL org.opencontainers.image.vendor="dev-containers"
 LABEL org.opencontainers.image.licenses="BSD"
-LABEL org.opencontainers.image.description="CLion dev container without compilers"
-LABEL org.opencontainers.image.title="CLion dev container without compilers"
+LABEL org.opencontainers.image.description="CLion dev container with clang compiler"
+LABEL org.opencontainers.image.title="CLion dev container with clang compiler"
 
-LABEL dev.containers.compilers=""
+LABEL dev.containers.compilers="clang15,python3"
 LABEL dev.containers.distro.variant="slim"
 LABEL dev.containers.distro.version="debian12"
 LABEL dev.containers.ide="CLion"
 
 # Run SSH server
 ENV DEV_CONTAINER_SSH_PORT=2221
-CMD ["bash", "-c", "/usr/sbin/sshd -De -p$DEV_CONTAINER_SSH_PORT{}"]
+CMD ["bash", "-c", "/usr/sbin/sshd -De -p${DEV_CONTAINER_SSH_PORT}"]

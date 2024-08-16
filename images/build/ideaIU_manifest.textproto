@@ -1,0 +1,81 @@
+# proto-file: dev-runner/pkg/dev/manifest/hub/manifest.proto
+# proto-message: Manifest
+
+kind: "dev-runner-manifest"
+version: "v1"
+
+spec: {
+  mount_points: [
+    {
+      container_path: "/home/user/.cache",
+      host_path: "${DEV_RUNNER_HOME_DIR}/.cache",
+      type: Directory,
+      need_create: true,
+    },
+    {
+      container_path: "/home/user/.config",
+      host_path: "${HOME}/.config"
+      type: Directory,
+      need_create: true,
+    },
+    {
+      container_path: "/home/user/.docker",
+      host_path: "${HOME}/.docker"
+      type: Directory,
+      need_create: true,
+    },
+    {
+      container_path: "/home/user/.java",
+      host_path: "${DEV_RUNNER_HOME_DIR}/.java"
+      type: Directory,
+      need_create: true,
+    },
+    {
+      container_path: "/home/user/.jdks",
+      host_path: "${DEV_RUNNER_HOME_DIR}/.jdks"
+      type: Directory,
+      need_create: true,
+    },
+    {
+      container_path: "/home/user/.local",
+      host_path: "${DEV_RUNNER_HOME_DIR}/.local"
+      type: Directory,
+      need_create: true,
+    },
+    {
+      container_path: "/home/user/.m2",
+      host_path: "${DEV_RUNNER_HOME_DIR}/.m2"
+      type: Directory,
+      need_create: true,
+    },
+    {
+      container_path: "/home/user/.ssh",
+      host_path: "${HOME}/.ssh"
+      type: Directory,
+      read_only: true,
+    },
+    {
+      container_path: "/home/user/go",
+      host_path: "${DEV_RUNNER_HOME_DIR}/go"
+      type: Directory,
+      need_create: true,
+    },
+    {
+      container_path: "/home/user/.bash_history",
+      host_path: "${DEV_RUNNER_HOME_DIR}/.bash_history"
+      type: File,
+      need_create: true,
+    },
+    {
+      container_path: "/home/user/.gitconfig",
+      host_path: "${HOME}/.gitconfig"
+      type: File,
+      read_only: true,
+    },
+    {
+      container_path: "/var/run/docker.sock",
+      host_path: "/var/run/docker.sock"
+      type: File,
+    }
+  ]
+}

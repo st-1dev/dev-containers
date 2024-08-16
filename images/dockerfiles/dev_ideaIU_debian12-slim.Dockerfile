@@ -18,16 +18,17 @@ RUN echo \
     bash-completion \
     ca-certificates \
     curl \
-    git \
     file \
+    git \
     locales \
-    nano \
     make \
+    nano \
     openssh-client \
     procps \
     rsync \
     sshpass \
     sudo \
+    unzip \
     wget \
   \
   && echo "installing X11 packages" \
@@ -90,38 +91,30 @@ FROM dev-base-with-user AS dev-base-with-dev-packags
 # Applications versions.
 ARG GOLANG_VERSION
 ARG GOFUMPT_VERSION
-ARG BAZELISK_VERSION
-ARG BUILDIFIER_VERSION
-ARG BUILDOZER_VERSION
+ARG PROTOC_VERSION
 
 RUN echo \
   && echo "installing go" \
-  && mkdir -p /opt \
-  && curl -sL "https://go.dev/dl/go${GOLANG_VERSION}.linux-amd64.tar.gz" | tar -C /opt -xzvf - \
+  && curl -sLo \
+    /opt/go.tar.gz \
+    "https://go.dev/dl/go${GOLANG_VERSION}.linux-amd64.tar.gz" \
+  && mkdir -p /opt/go \
+  && tar --strip-components=1  -xf /opt/go.tar.gz -C /opt/go \
+  && rm /opt/go.tar.gz \
+  \
+  && echo "installing protoc" \
+  && curl -sLo \
+    /opt/protoc.zip \
+    "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip" \
+  && mkdir -p /opt/protoc \
+  && unzip -x /opt/protoc.zip -d /opt/protoc \
+  && rm /opt/protoc.zip \
   \
   && echo "installing gofumpt" \
   && curl -sLo \
     /usr/bin/gofumpt \
-    "https://github.com/mvdan/gofumpt/releases/download/${GOFUMPT_VERSION}/gofumpt_${GOFUMPT_VERSION}_linux_amd64" \
+    "https://github.com/mvdan/gofumpt/releases/download/v${GOFUMPT_VERSION}/gofumpt_v${GOFUMPT_VERSION}_linux_amd64" \
   && chmod +x /usr/bin/gofumpt \
-  \
-  && echo "installing bazelisk" \
-  && curl -sLo \
-    /usr/bin/bazel \
-    "https://github.com/bazelbuild/bazelisk/releases/download/${BAZELISK_VERSION}/bazelisk-linux-amd64" \
-  && chmod +x /usr/bin/bazel \
-  \
-  && echo "installing buildifier" \
-  && curl -sLo \
-    /usr/bin/buildifier \
-    "https://github.com/bazelbuild/buildtools/releases/download/${BUILDIFIER_VERSION}/buildifier-linux-amd64" \
-  && chmod +x /usr/bin/buildifier \
-  \
-  && echo "installing buildozer" \
-  && curl -sLo \
-    /usr/bin/buildozer \
-    "https://github.com/bazelbuild/buildtools/releases/download/${BUILDOZER_VERSION}/buildozer-linux-amd64" \
-  && chmod +x /usr/bin/buildozer \
   \
   && echo "dev-ideaIU-debian12-slim" >> /etc/debian_chroot
 
@@ -143,7 +136,7 @@ RUN echo \
   && ln -s \
     /opt/jetbrains/ideaIU/bin/idea.sh \
     /usr/bin/ide.sh \
-  && rm -f /opt/jetbrains/ideaIU.tar.gz
+  && rm /opt/jetbrains/ideaIU.tar.gz
 
 
 FROM dev-base-with-ide AS dev-base-final
@@ -165,4 +158,4 @@ LABEL dev.containers.ide="ideaIU"
 
 # Run SSH server
 ENV DEV_CONTAINER_SSH_PORT=2221
-CMD ["bash", "-c", "/usr/sbin/sshd -De -p$DEV_CONTAINER_SSH_PORT{}"]
+CMD ["bash", "-c", "/usr/sbin/sshd -De -p${DEV_CONTAINER_SSH_PORT}"]

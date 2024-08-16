@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"dev-runner/pkg/dev/naming"
 	"flag"
 	"fmt"
 	"log"
@@ -9,8 +10,6 @@ import (
 
 	"dev-runner/pkg/conainer/management"
 	"dev-runner/pkg/conainer/management/creator"
-
-	"dev-runner/pkg/dev"
 
 	"github.com/google/subcommands"
 
@@ -71,7 +70,7 @@ func (p *StopCmd) execute(ctx context.Context, _ *flag.FlagSet) (err error) {
 		return fmt.Errorf("container manager initialization failed: %w", err)
 	}
 
-	containerName := dev.GenContainerName(p.imageTag, p.hostWorkDirPath)
+	containerName := naming.GenContainerName(p.imageTag, p.hostWorkDirPath)
 
 	err = manager.StopContainer(ctx, containerName)
 	if err != nil {

@@ -18,16 +18,17 @@ RUN echo \
     bash-completion \
     ca-certificates \
     curl \
-    git \
     file \
+    git \
     locales \
-    nano \
     make \
+    nano \
     openssh-client \
     procps \
     rsync \
     sshpass \
     sudo \
+    unzip \
     wget \
   \
   && echo "installing X11 packages" \
@@ -108,7 +109,7 @@ RUN echo \
   && ln -s \
     /opt/jetbrains/DataGrip/bin/datagrip.sh \
     /usr/bin/ide.sh \
-  && rm -f /opt/jetbrains/DataGrip.tar.gz
+  && rm /opt/jetbrains/DataGrip.tar.gz
 
 
 FROM dev-base-with-ide AS dev-base-final
@@ -130,4 +131,4 @@ LABEL dev.containers.ide="DataGrip"
 
 # Run SSH server
 ENV DEV_CONTAINER_SSH_PORT=2221
-CMD ["bash", "-c", "/usr/sbin/sshd -De -p$DEV_CONTAINER_SSH_PORT{}"]
+CMD ["bash", "-c", "/usr/sbin/sshd -De -p${DEV_CONTAINER_SSH_PORT}"]

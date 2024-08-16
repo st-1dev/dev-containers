@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"dev-runner/pkg/dev/naming"
 	"flag"
 	"fmt"
 	"log"
@@ -12,8 +13,6 @@ import (
 	"dev-runner/pkg/conainer/management/creator"
 
 	"dev-runner/pkg/conainer/management"
-	"dev-runner/pkg/dev"
-
 	"github.com/google/subcommands"
 
 	fp "dev-runner/pkg/filepath"
@@ -90,7 +89,7 @@ func (p *RunCmd) execute(ctx context.Context, _ *flag.FlagSet) (err error) {
 		return fmt.Errorf("container manager initialization failed: %w", err)
 	}
 
-	containerName := dev.GenContainerName(p.imageTag, p.hostWorkDirPath)
+	containerName := naming.GenContainerName(p.imageTag, p.hostWorkDirPath)
 
 	var networkMode management.NetworkMode
 	networkMode, err = getNetworkMode(p.networkMode)
@@ -140,7 +139,7 @@ func getMountPoints(
 	hostHomeDir string,
 	userInsideContainer string,
 ) (mountPoints []management.MountPoint, err error) {
-	devHomeDirName := dev.GenDevHomeDirName(imageTag, hostWorkDir)
+	devHomeDirName := naming.GenDevHomeDirName(imageTag, hostWorkDir)
 	devHomeDir := filepath.Join(hostWorkDir, "..", devHomeDirName)
 
 	homeDirInsideContainer := fmt.Sprintf("/home/%s", userInsideContainer)
